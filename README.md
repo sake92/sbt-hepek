@@ -50,6 +50,14 @@ When you run `sbt hepek` task, you'll find the `renderme.txt` file in the `targe
 That's all there is to it, for now...  
 For a more comprehensive example see the [hepek-examples](https://github.com/sake92/hepek-examples) repo.
 
+## About the name
+
+A "hepek" in Bosnian language is a jargon for a thing/thingy/stuff...  
+It is used when we don't know the name of a thing: "Give me that ... *hepek*".  
+Also, it is used in a famous show called "Top lista nadrealista" for calming down situations of various kinds.  
+
+[![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/Jc9SeKu-YwQ/0.jpg)](https://youtu.be/Jc9SeKu-YwQ?t=2m11s)
+
 ## Contact
 
 Author of the plugin is Sakib Hadžiavdić.  
