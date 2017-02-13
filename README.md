@@ -4,7 +4,7 @@ Welcome to sbt-hepek, an [sbt](http://www.scala-sbt.org) plugin for rendering Sc
 
 ## Installing
 
-Sbt-hepek is just like any other plugin for sbt, the installation is done by adding it to the `project/plugins.sbt` file:
+Sbt-hepek is just like any other plugin for sbt, the installation is done by adding following lines to the `project/plugins.sbt` file:
 
 ```scala
 resolvers += Resolver.sonatypeRepo("snapshots")
@@ -16,7 +16,7 @@ Note that this is the first version of this project, currently in development (S
 ## Using
 
 There is one main goal of sbt-hepek, called `hepek`. 
-When executed, it will render all `object`s that extend [`Renderable`](https://github.com/sake92/hepek-core/blob/master/src/main/java/ba/sake/hepek/core/Renderable.java) 
+When executed, it will render all Scala `object`s that extend [`Renderable`](https://github.com/sake92/hepek-core/blob/master/src/main/java/ba/sake/hepek/core/Renderable.java) 
 trait to respective files, relative to the `hepekTarget` folder.  
 
 Default value for `hepekTarget` is `hepekTarget := target.value / "web" / "public" / "main"`.  
