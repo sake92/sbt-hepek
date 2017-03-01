@@ -25,6 +25,7 @@ object HepekPlugin extends sbt.AutoPlugin {
     hepek := {
       val lastRun = target.value / "hepek.lastrun"
       val classDir = classDirectory.value
+      // TODO doesn't work for test, not sure what should this be.. :/
       val fcp = (fullClasspath in Runtime).value.files // WHOLE classpath: deps & user classes
       Tasks.runHepek(lastRun, hepekIncremental.value, fcp, hepekTarget.value, classDir, streams.value.log)
     }
@@ -32,12 +33,11 @@ object HepekPlugin extends sbt.AutoPlugin {
 
   override def projectSettings: Seq[Setting[_]] = Seq(
     hepekTarget := target.value / "web" / "public" / "main", // mimic sbt-web folder structure
-    (hepekTarget in Test) := target.value / "web" / "public" / "test",
+    //(hepekTarget in Test) := target.value / "web" / "public" / "test",
     hepekIncremental := true,
     libraryDependencies += "ba.sake" % "hepek-core" % HepekCoreVersion // add "hepek-core" to classpath, we need Renderable
   ) ++
-    inConfig(Compile)(rawHepekSettings) ++
-    inConfig(Test)(rawHepekSettings)
+    inConfig(Compile)(rawHepekSettings) // ++ inConfig(Test)(rawHepekSettings)
 
 }
 
@@ -88,7 +88,10 @@ object Tasks {
       userClassNames ++ userClassRevDeps.values.flatten
     } else userClassNames
 
-    classNamesToRender.flatMap { className =>
+    // dont consider lambdas etc... further nested classes
+    val classNamesToRenderFiltered = classNamesToRender.filterNot(_.count(_ == '$') > 1)
+
+    classNamesToRenderFiltered.flatMap { className =>
       val clazz = fcpClassloader.loadClass(className)
       val isAbstract = Modifier.isAbstract(clazz.getModifiers) || Modifier.isInterface(clazz.getModifiers)
       val extendsApp = className.contains("$delayedInit")
