@@ -50,7 +50,7 @@ When you run `sbt hepek` task, you'll find the `renderme.txt` file in the `targe
 That's all there is to it, for now...  
 For a more comprehensive example see these repos:
 - [hepek examples](https://github.com/sake92/hepek-examples)
-- [my blog](https://github.com/sake92/sake-ba-blog) rendered @ [http://www.blog.sake.ba](blog.sake.ba)
+- [my blog](https://github.com/sake92/sake-ba-blog) rendered @ [blog.sake.ba](http://blog.sake.ba)
 
 ## About the name
 
