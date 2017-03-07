@@ -1,6 +1,6 @@
 # sbt-hepek
 
-Welcome to sbt-hepek, an [sbt](http://www.scala-sbt.org) plugin for rendering Scala `object`s to files.
+Welcome to **sbt-hepek**, an [sbt](http://www.scala-sbt.org) plugin for rendering Scala `object`s to files.
 
 ## Installing
 
@@ -18,11 +18,11 @@ enablePlugins(HepekPlugin)
 //logLevel in hepek := Level.Debug // enable to see which objects are rendered
 ```
 
-Note that this is the first version of this project, currently in development (SNAPSHOT).
+ Note that this is the **first version** of this plugin, currently in development (SNAPSHOT).
 
 ## Using
 
-There is one main goal of sbt-hepek, called `hepek`. 
+There is one goal of sbt-hepek, called `hepek`.  
 When executed, it will render all Scala `object`s that extend [`Renderable`](https://github.com/sake92/hepek-core/blob/master/src/main/java/ba/sake/hepek/core/Renderable.java) 
 trait to respective files, relative to the `hepekTarget` folder.  
 
@@ -48,7 +48,9 @@ The good old `target` folder.
 When you run `sbt hepek` task, you'll find the `renderme.txt` file in the `target/web/public/main` folder with contents you specified by the `render` method.
 
 That's all there is to it, for now...  
-For a more comprehensive example see the [hepek-examples](https://github.com/sake92/hepek-examples) repo.
+For a more comprehensive example see these repos:
+- [hepek examples](https://github.com/sake92/hepek-examples)
+- [my blog](https://github.com/sake92/sake-ba-blog) rendered @ [https://blog.sake.ba](blog.sake.ba)
 
 ## About the name
 
@@ -57,6 +59,10 @@ It is used when we don't know the name of a thing: "Give me that ... *hepek*".
 Also, it is used in the famous show called "Top lista nadrealista" as a name for an advanced device which calms down situations of various kinds.  
 
 [![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/Jc9SeKu-YwQ/0.jpg)](https://youtu.be/Jc9SeKu-YwQ?t=2m11s)
+
+## Fun fact
+I think that this is the first project that tried this approach, namely, using first-class Scala `object`s for this kind of stuff.  
+Correct me if I'm wrong... ^_^
 
 ## Contact
 
