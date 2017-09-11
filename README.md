@@ -18,8 +18,6 @@ enablePlugins(HepekPlugin)
 //logLevel in hepek := Level.Debug // enable to see which objects are rendered
 ```
 
- Note that this is the **first version** of this plugin, currently in development (SNAPSHOT).
-
 ## Using
 
 There is one goal of sbt-hepek, called `hepek`.  
