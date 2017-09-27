@@ -5,14 +5,15 @@ import scala.collection.JavaConverters._
 import scala.reflect.runtime.{ universe => ru }
 import sbt._
 import sbt.Keys._
-import ba.sake.hepek.core._
+import ba.sake.hepek.core.ClassycleDependencyUtils
+import ba.sake.hepek.core.Renderable
 import classycle.ClassAttributes
 
 object HepekPlugin extends sbt.AutoPlugin {
 
   override def requires = plugins.JvmPlugin
 
-  private val HepekCoreVersion = "0.0.1"
+  private val HepekCoreVersion = "0.0.3"
 
   object autoImport {
     lazy val hepek = taskKey[Long]("Runs hepek.")
@@ -25,11 +26,10 @@ object HepekPlugin extends sbt.AutoPlugin {
     hepek := {
       val lastRun = target.value / "hepek.lastrun"
       val classDir = classDirectory.value
-      // TODO doesn't work for test, not sure what should this be.. :/
+      // TODO what to do in test? not sure... :/
       val fcp = (fullClasspath in Runtime).value.files // WHOLE classpath: deps & user classes
       Tasks.runHepek(lastRun, hepekIncremental.value, fcp, hepekTarget.value, classDir, streams.value.log)
-    }
-  )
+    })
 
   override def projectSettings: Seq[Setting[_]] = Seq(
     hepekTarget := target.value / "web" / "public" / "main", // mimic sbt-web folder structure
@@ -60,7 +60,7 @@ object Tasks {
       allUserClassFiles.filter(_.lastModified > lastRun) // only handle classes CHANGED since last hepek-ing
     } else allUserClassFiles // else ALL classes compiled
 
-    val fcpClassloader = sbt.classpath.ClasspathUtilities.toLoader(fcp)
+    val fcpClassloader = internal.inc.classpath.ClasspathUtilities.toLoader(fcp)
     val classNamesToRender = getClassNamesToRender(userClassFiles, classDir, isIncremental, fcpClassloader)
     writeObjects2Files(classNamesToRender, fcpClassloader, hepekTargetDir, logger)
     writeLastRun(lastRunFile)
@@ -72,7 +72,6 @@ object Tasks {
     val renderableSymbol = ruMirror.staticClass(classOf[Renderable].getCanonicalName)
 
     val userClassNames = userClassFiles.get.flatMap { classFile =>
-      //val relPath = classDir.toURI().relativize(classFile.toURI()).getPath() 
       IO.relativize(classDir, classFile).map { p => // e.g. com/myproject/MyClass.class
         // remove ".class" and replace "\" or "/" with "."
         p.dropRight(6).replaceAll("\\\\|/", "\\.")
@@ -106,7 +105,6 @@ object Tasks {
         if (isSubclassOfRenderable) {
           // Scala object's inner class IMPLEMENTS the Renderable, but object has static methods!
           // So, we leave only the object in the SET
-          // TODO Is there a more elegant way?
           Option(className.replaceAll("\\$", ""))
         } else {
           None
