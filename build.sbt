@@ -1,13 +1,12 @@
+
 organization := "ba.sake"
-
 name := "sbt-hepek"
-
-version := "0.0.3"
-
 description := "Hepek sbt plugin"
 
+version := "0.0.4"
+
 libraryDependencies ++= Seq(
-  "ba.sake" % "hepek-core" % "0.0.3"
+  "ba.sake" % "hepek-core" % "0.0.4"
 )
 
 sbtPlugin := true
@@ -16,7 +15,7 @@ publishMavenStyle := true
 
 publishTo := {
   val nexus = "https://oss.sonatype.org/"
-  if (version.value.trim.endsWith("SNAPSHOT"))
+  if (isSnapshot.value)
     Some("snapshots" at nexus + "content/repositories/snapshots")
   else
     Some("releases" at nexus + "service/local/staging/deploy/maven2")
@@ -28,5 +27,5 @@ developers += Developer("sake92", "Sakib Hadžiavdić", "sakib@sake.ba", url("ht
 
 scmInfo := Some(ScmInfo(url("https://github.com/sake92/sbt-hepek"), "scm:git:git@github.com:sake92/sbt-hepek.git"))
 
-homepage := Some(url("http://sake.ba")) // url in maven
+homepage := Some(url("http://sake.ba"))
 
