@@ -1,6 +1,12 @@
 # sbt-hepek
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ba.sake/sbt-hepek/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ba.sake/sbt-hepek)  
 
 Welcome to **sbt-hepek**, an [sbt](http://www.scala-sbt.org) plugin for rendering Scala `object`s to files.
+
+## Docs/Examples
+- [my blog (full-blown example)](https://github.com/sake92/sake-ba-source) rendered @ [blog.sake.ba](https://blog.sake.ba)
+- [simplest examples](https://github.com/sake92/hepek-examples)
+- ["Philosophy"](https://dev.to/sake_92/render-static-site-from-scala-code)
 
 ## Installing
 
@@ -45,11 +51,6 @@ object RenderMe extends Renderable {
 Default value for `hepekTarget` is `hepekTarget := target.value / "web" / "public" / "main"`.  
 The good old `target` folder.  
 When you run `sbt hepek` task, you'll find the `renderme.txt` file in the `target/web/public/main` folder with contents you specified by the `render` method.
-
-## Docs
-- ["Philosophy"](https://dev.to/sake_92/render-static-site-from-scala-code)
-- [my website (tutorials in Bosnian)](https://github.com/sake92/sake-ba-source) rendered @ [sake.ba](https://sake.ba)
-- [hepek examples](https://github.com/sake92/hepek-examples)
 
 ## About the name
 
