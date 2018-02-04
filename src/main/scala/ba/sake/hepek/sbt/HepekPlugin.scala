@@ -8,12 +8,15 @@ import sbt.Keys._
 import ba.sake.hepek.core.ClassycleDependencyUtils
 import ba.sake.hepek.core.Renderable
 import classycle.ClassAttributes
+import java.nio.file.Path
+import java.nio.file.Files
+import java.nio.charset.StandardCharsets
 
 object HepekPlugin extends sbt.AutoPlugin {
 
   override def requires = plugins.JvmPlugin
 
-  private val HepekCoreVersion = "0.0.3"
+  private val HepekCoreVersion = "0.1.0-SNAPSHOT"
 
   object autoImport {
     lazy val hepek = taskKey[Long]("Runs hepek.")
@@ -26,18 +29,15 @@ object HepekPlugin extends sbt.AutoPlugin {
     hepek := {
       val lastRun = target.value / "hepek.lastrun"
       val classDir = classDirectory.value
-      // TODO what to do in test? not sure... :/
       val fcp = (fullClasspath in Runtime).value.files // WHOLE classpath: deps & user classes
       Tasks.runHepek(lastRun, hepekIncremental.value, fcp, hepekTarget.value, classDir, streams.value.log)
     })
 
   override def projectSettings: Seq[Setting[_]] = Seq(
     hepekTarget := target.value / "web" / "public" / "main", // mimic sbt-web folder structure
-    //(hepekTarget in Test) := target.value / "web" / "public" / "test",
     hepekIncremental := true,
     libraryDependencies += "ba.sake" % "hepek-core" % HepekCoreVersion // add "hepek-core" to classpath, we need Renderable
-  ) ++
-    inConfig(Compile)(rawHepekSettings) // ++ inConfig(Test)(rawHepekSettings)
+  ) ++ inConfig(Compile)(rawHepekSettings)
 
 }
 
@@ -120,12 +120,13 @@ object Tasks {
     }
     classNamesToRender.foreach { className => // TODO write files in parallel? O.o
       val clazz = fcpClassloader.loadClass(className)
-      val classNamePath = clazz.getMethod("relPath").invoke(null).asInstanceOf[File]
+      val classNamePath = clazz.getMethod("relPath").invoke(null).asInstanceOf[Path]
       val renderMethod = clazz.getMethod("render")
-      val result = renderMethod.invoke(null).asInstanceOf[String] // null => should be static method!
-      val f = IO.resolve(hepekTargetDir, classNamePath)
-      logger.debug(s"Rendering class: '$className' to '${f.toString}'")
-      IO.write(f, result)
+      val content = renderMethod.invoke(null).asInstanceOf[String] // null => should be static method!
+      val p = hepekTargetDir.toPath.resolve(classNamePath)
+      logger.debug(s"Rendering '$className' to '${p.toString}'")
+      Files.createDirectories(p.getParent)
+      Files.write(p, content.getBytes(StandardCharsets.UTF_8))
     }
   }
 
