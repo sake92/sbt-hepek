@@ -16,7 +16,7 @@ Adding following lines to the `project/plugins.sbt` file, in your project:
 
 ```scala
 resolvers += Resolver.sonatypeRepo("snapshots")
-addSbtPlugin("ba.sake" % "sbt-hepek" % "0.0.4")
+addSbtPlugin("ba.sake" % "sbt-hepek" % "0.1.0-SNAPSHOT")
 ```
 
 and enable it in your `build.sbt`: 
