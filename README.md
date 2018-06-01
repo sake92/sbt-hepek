@@ -4,7 +4,7 @@
 Welcome to **sbt-hepek**, an [sbt](http://www.scala-sbt.org) plugin for rendering Scala `object`s to files.  
 See also [**hepek**](https://github.com/sake92/hepek), static content generator that builds on this plugin.
 
-## Docs/Examples
+## Examples
 - [my blog (full-blown example)](https://github.com/sake92/sake-ba-source) rendered @ [blog.sake.ba](https://blog.sake.ba)
 - [simplest examples](https://github.com/sake92/hepek-examples)
 - ["Philosophy"](https://dev.to/sake_92/render-static-site-from-scala-code)
