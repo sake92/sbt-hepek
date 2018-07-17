@@ -16,7 +16,7 @@ object HepekPlugin extends sbt.AutoPlugin {
 
   override def requires = plugins.JvmPlugin
 
-  private val HepekCoreVersion = "0.1.0-SNAPSHOT"
+  private val HepekCoreVersion = "0.1.1"
 
   object autoImport {
     lazy val hepek = taskKey[Long]("Runs hepek.")
