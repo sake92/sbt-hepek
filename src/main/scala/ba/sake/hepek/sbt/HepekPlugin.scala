@@ -14,7 +14,7 @@ import classycle.ClassAttributes
 object HepekPlugin extends sbt.AutoPlugin {
   override def requires = plugins.JvmPlugin
 
-  private val HepekCoreVersion = "0.2.0-SNAPSHOT"
+  private val HepekCoreVersion = "0.2.0"
 
   object autoImport {
     lazy val hepek       = taskKey[Long]("Runs hepek.")
@@ -49,9 +49,8 @@ object HepekPlugin extends sbt.AutoPlugin {
 }
 
 object Tasks {
-
-private val RenderableFQN = classOf[Renderable].getCanonicalName()
-private val MultiRenderableFQN = classOf[MultiRenderable].getCanonicalName()
+  private val RenderableFQN      = classOf[Renderable].getCanonicalName()
+  private val MultiRenderableFQN = classOf[MultiRenderable].getCanonicalName()
 
   /**
     * @param lastRunFile File that contains timestamp of last run.
@@ -79,31 +78,29 @@ private val MultiRenderableFQN = classOf[MultiRenderable].getCanonicalName()
 
     /* resolving */
     val fcpClassloader = internal.inc.classpath.ClasspathUtilities.toLoader(fcp)
-    val ruMirror = ru.runtimeMirror(fcpClassloader)
-    val renderableObjectMirrors =
-      getRenderableObjectMirrors(userClassFiles, classDir, isIncremental, ruMirror, logger)
-    /* writing */
-    renderableObjectMirrors.foreach { roMirror =>
-      writeRenderableObject(hepekTargetDir, ruMirror: ru.Mirror, roMirror, logger)
-    }
+    val ruMirror       = ru.runtimeMirror(fcpClassloader)
+    renderObjects(hepekTargetDir, userClassFiles, classDir, isIncremental, ruMirror, logger)
     writeLastRun(lastRunFile)
   }
 
   /** @return Renderable/MultiRenderable classes set */
-  private def getRenderableObjectMirrors(
+  private def renderObjects(
+      hepekTargetDir: File,
       userClassFiles: Seq[File],
       classDir: File,
       isIncremental: Boolean,
       ruMirror: ru.Mirror,
       logger: Logger
-  ): Seq[ru.InstanceMirror] = {
-    
+  ): Unit = {
     /* Can't use ru.typeOf[Renderable] !!!
      * because that's class loaded in SBT's classloader, not the one in user space !?
      */
     val renderableType = ruMirror.staticClass(RenderableFQN).asType.toType
-    val multiRenderableType =
-      ruMirror.staticClass(MultiRenderableFQN).asType.toType
+    val renderSymbol   = renderableType.member(ru.TermName("render")).asMethod
+    val relPathSymbol  = renderableType.member(ru.TermName("relPath")).asMethod
+
+    val multiRenderableType = ruMirror.staticClass(MultiRenderableFQN).asType.toType
+    val renderablesSymbol   = multiRenderableType.member(ru.TermName("renderables")).asMethod
 
     val userClassNames = for {
       classFile <- userClassFiles.get
@@ -113,15 +110,31 @@ private val MultiRenderableFQN = classOf[MultiRenderable].getCanonicalName()
       .replaceAll("\\\\|/", "\\.") // replace "\" and "/" with "."
 
     val classNamesToRender = possibleClassNamesToRender(classDir, isIncremental, userClassNames)
-    classNamesToRender.flatMap { className =>
-      val moduleSymbol = ruMirror.staticModule(className)
-      if (moduleSymbol.moduleClass.asType.toType <:< renderableType) {
-        logger.info(s"Yesss: $className !")
+    classNamesToRender.foreach { className =>
+      val moduleSymbol    = ruMirror.staticModule(className)
+      val moduleClassType = moduleSymbol.moduleClass.asType.toType
+      if (moduleClassType <:< renderableType) {
         val objInstance = ruMirror.reflectModule(moduleSymbol).instance
         val objMirror   = ruMirror.reflect(objInstance)
-        Some(objMirror)
-      } else None
-    }.toSeq
+        val content     = objMirror.reflectMethod(renderSymbol).apply().asInstanceOf[String]
+        val relPath     = objMirror.reflectMethod(relPathSymbol).apply().asInstanceOf[Path]
+        val className   = objInstance.getClass().getCanonicalName()
+        writeRenderableObject(hepekTargetDir, className, content, relPath, logger)
+      } else if (moduleClassType <:< multiRenderableType) {
+        val multiObjInstance = ruMirror.reflectModule(moduleSymbol).instance
+        val multiObjMirror   = ruMirror.reflect(multiObjInstance)
+        val renderables = multiObjMirror
+          .reflectMethod(renderablesSymbol)
+          .apply()
+          .asInstanceOf[java.util.List[_]]
+        renderables.asScala.foreach { r =>
+          val objMirror = ruMirror.reflect(r)
+          val content   = objMirror.reflectMethod(renderSymbol).apply().asInstanceOf[String]
+          val relPath   = objMirror.reflectMethod(relPathSymbol).apply().asInstanceOf[Path]
+          writeRenderableObject(hepekTargetDir, className, content, relPath, logger)
+        }
+      }
+    }
   }
 
   private def possibleClassNamesToRender(
@@ -129,7 +142,7 @@ private val MultiRenderableFQN = classOf[MultiRenderable].getCanonicalName()
       isIncremental: Boolean,
       userClassNames: Seq[String]
   ): Set[String] = {
-    (if (isIncremental) {
+    val classNames = if (isIncremental) {
       val filesJavaList = new java.util.ArrayList[File]()
       filesJavaList.add(classDir)
       val userClassRevDeps = ClassycleDependencyUtils
@@ -140,25 +153,19 @@ private val MultiRenderableFQN = classOf[MultiRenderable].getCanonicalName()
             userClassNames.contains(vertex.getAttributes.asInstanceOf[ClassAttributes].getName)
         )
         .mapValues { _.asScala.map(_.getAttributes.asInstanceOf[ClassAttributes].getName) }
-      userClassNames ++ userClassRevDeps.values.flatten // WTF !? :/
-    } else userClassNames).toSet
+      userClassRevDeps.values.flatten 
+    } else userClassNames
+    classNames.toSet
   }
 
   /** Writes Renderable object to its path */
   private def writeRenderableObject(
       hepekTargetDir: File,
-      ruMirror: ru.Mirror,
-      renderableMirror: ru.InstanceMirror,
+      className: String,
+      content: String,
+      relPath: Path,
       logger: Logger
   ): Unit = {
-    val renderableType = ruMirror.staticClass(RenderableFQN).asType.toType
-    logger.info(s"mems: ${renderableType.members}")
-    val renderSymbol  = renderableType.member(ru.TermName("render")).asMethod
-    val relPathSymbol = renderableType.member(ru.TermName("relPath")).asMethod
-    val content       = renderableMirror.reflectMethod(renderSymbol).apply().asInstanceOf[String]
-    val relPath       = renderableMirror.reflectMethod(relPathSymbol).apply().asInstanceOf[Path]
-    val className     = renderableMirror.instance.getClass().getCanonicalName()
-
     val p = hepekTargetDir.toPath.resolve(relPath)
     logger.debug(s"Rendering '$className' to '${p.toString}'")
     Files.createDirectories(p.getParent)

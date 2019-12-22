@@ -2,10 +2,10 @@ organization := "ba.sake"
 name := "sbt-hepek"
 description := "Hepek sbt plugin"
 
-version := "0.2.0-SNAPSHOT"
+version := "0.2.0"
 
 libraryDependencies ++= Seq(
-  "ba.sake" % "hepek-core" % "0.2.0-SNAPSHOT"
+  "ba.sake" % "hepek-core" % "0.2.0"
 )
 
 sbtPlugin := true
