@@ -39,11 +39,11 @@ import ba.sake.hepek.core.Renderable
 
 object RenderMe extends Renderable {
 
-  override def render: String = {
+  override def render =
     "Some text..." // arbitrary Scala code
-  }
   
-  override def relPath = Paths.get("renderme.txt")
+  override def relPath = 
+    Paths.get("renderme.txt")
 }
 ```
 
