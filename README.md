@@ -2,27 +2,27 @@
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/ba.sake/sbt-hepek/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ba.sake/sbt-hepek)  
 
 Welcome to **sbt-hepek**, an [sbt](http://www.scala-sbt.org) plugin for rendering Scala `object`s to files.  
-See also [**hepek**](https://github.com/sake92/hepek), static content generator that builds on this plugin.
+See also [**hepek**](https://github.com/sake92/hepek), static content generator that builds upon this plugin.
 
 ## Examples
 - [my blog (full-blown example)](https://github.com/sake92/sake-ba-source) rendered @ [blog.sake.ba](https://blog.sake.ba)
-- [simplest examples](https://github.com/sake92/hepek-examples)
+- [examples](https://github.com/sake92/hepek-examples)
 - ["Philosophy"](https://dev.to/sake_92/render-static-site-from-scala-code)
 
 ## Installing
 
 Make sure you are using sbt 1.x!
-Adding following lines to the `project/plugins.sbt` file, in your project:
+Adding following line to the `project/plugins.sbt` file, in your project:
 
 ```scala
-addSbtPlugin("ba.sake" % "sbt-hepek" % "0.2.0")
+addSbtPlugin("ba.sake" % "sbt-hepek" % "0.2.1")
 ```
 
 and enable it in your `build.sbt`: 
 
 ```scala
 enablePlugins(HepekPlugin)
-//logLevel in hepek := Level.Debug // enable to see which objects are rendered
+// logLevel in hepek := Level.Debug // enable to see which objects are rendered
 ```
 
 ## Using
@@ -34,23 +34,24 @@ trait to respective files, relative to the `hepekTarget` folder.
 Example:
 
 ```scala
-import java.io.File
+import java.nio.file.Paths
 import ba.sake.hepek.core.Renderable
 
 object RenderMe extends Renderable {
 
   override def render: String = {
-    // arbitrary Scala code
-    "Some text..."
+    "Some text..." // arbitrary Scala code
   }
   
-  override def relPath: File = new File("renderme.txt")
+  override def relPath = Paths.get("renderme.txt")
 }
 ```
 
 Default value for `hepekTarget` is `hepekTarget := target.value / "web" / "public" / "main"`.  
 The good old `target` folder.  
 When you run `sbt hepek` task, you'll find the `renderme.txt` file in the `target/web/public/main` folder with contents you specified by the `render` method.
+
+---
 
 ## About the name
 

@@ -4,17 +4,16 @@ import java.lang.reflect.Modifier
 import java.nio.file.Path
 import java.nio.file.Files
 import java.nio.charset.StandardCharsets
+import classycle.ClassAttributes
 import scala.collection.JavaConverters._
-import scala.reflect.runtime.{universe => ru}
 import sbt._
 import sbt.Keys._
 import ba.sake.hepek.core._
-import classycle.ClassAttributes
 
 object HepekPlugin extends sbt.AutoPlugin {
   override def requires = plugins.JvmPlugin
 
-  private val HepekCoreVersion = "0.2.0"
+  val HepekCoreVersion = "0.2.0"
 
   object autoImport {
     lazy val hepek       = taskKey[Long]("Runs hepek.")
@@ -48,7 +47,14 @@ object HepekPlugin extends sbt.AutoPlugin {
     ) ++ inConfig(Compile)(rawHepekSettings)
 }
 
+/*
+ * Can't use scala reflection, because we want to support multiple Scala versions.
+ * Getting the "Scala signature package has wrong version [error] expected: 5.0 [error] found: 5.2"
+ * when I tried it.
+ * Sbt's Scala version is fixed to 2.12 so I can't update it to 2.13 either. :)
+ */
 object Tasks {
+  private val ModuleFieldName    = "MODULE$"
   private val RenderableFQN      = classOf[Renderable].getCanonicalName()
   private val MultiRenderableFQN = classOf[MultiRenderable].getCanonicalName()
 
@@ -78,8 +84,7 @@ object Tasks {
 
     /* resolving */
     val fcpClassloader = internal.inc.classpath.ClasspathUtilities.toLoader(fcp)
-    val ruMirror       = ru.runtimeMirror(fcpClassloader)
-    renderObjects(hepekTargetDir, userClassFiles, classDir, isIncremental, ruMirror, logger)
+    renderObjects(hepekTargetDir, userClassFiles, classDir, isIncremental, fcpClassloader, logger)
     writeLastRun(lastRunFile)
   }
 
@@ -89,19 +94,9 @@ object Tasks {
       userClassFiles: Seq[File],
       classDir: File,
       isIncremental: Boolean,
-      ruMirror: ru.Mirror,
+      classloader: ClassLoader,
       logger: Logger
   ): Unit = {
-    /* Can't use ru.typeOf[Renderable] !!!
-     * because that's class loaded in SBT's classloader, not the one in user space !?
-     */
-    val renderableType = ruMirror.staticClass(RenderableFQN).asType.toType
-    val renderSymbol   = renderableType.member(ru.TermName("render")).asMethod
-    val relPathSymbol  = renderableType.member(ru.TermName("relPath")).asMethod
-
-    val multiRenderableType = ruMirror.staticClass(MultiRenderableFQN).asType.toType
-    val renderablesSymbol   = multiRenderableType.member(ru.TermName("renderables")).asMethod
-
     val userClassNames = for {
       classFile <- userClassFiles.get
       p         <- IO.relativize(classDir, classFile) // e.g. com/myproject/MyClass.class
@@ -109,29 +104,33 @@ object Tasks {
       .dropRight(6)                // remove ".class" suffix
       .replaceAll("\\\\|/", "\\.") // replace "\" and "/" with "."
 
-    val classNamesToRender = possibleClassNamesToRender(classDir, isIncremental, userClassNames)
+    val classNamesToRender   = possibleClassNamesToRender(classDir, isIncremental, userClassNames)
+    val renderableClazz      = classloader.loadClass(RenderableFQN)
+    val multiRenderableClazz = classloader.loadClass(MultiRenderableFQN)
+
     classNamesToRender.foreach { className =>
-      val moduleSymbol    = ruMirror.staticModule(className)
-      val moduleClassType = moduleSymbol.moduleClass.asType.toType
-      if (moduleClassType <:< renderableType) {
-        val objInstance = ruMirror.reflectModule(moduleSymbol).instance
-        val objMirror   = ruMirror.reflect(objInstance)
-        val content     = objMirror.reflectMethod(renderSymbol).apply().asInstanceOf[String]
-        val relPath     = objMirror.reflectMethod(relPathSymbol).apply().asInstanceOf[Path]
-        val className   = objInstance.getClass().getCanonicalName()
-        writeRenderableObject(hepekTargetDir, className, content, relPath, logger)
-      } else if (moduleClassType <:< multiRenderableType) {
-        val multiObjInstance = ruMirror.reflectModule(moduleSymbol).instance
-        val multiObjMirror   = ruMirror.reflect(multiObjInstance)
-        val renderables = multiObjMirror
-          .reflectMethod(renderablesSymbol)
-          .apply()
-          .asInstanceOf[java.util.List[_]]
-        renderables.asScala.foreach { r =>
-          val objMirror = ruMirror.reflect(r)
-          val content   = objMirror.reflectMethod(renderSymbol).apply().asInstanceOf[String]
-          val relPath   = objMirror.reflectMethod(relPathSymbol).apply().asInstanceOf[Path]
+      val clazz      = classloader.loadClass(className)
+      val mods       = clazz.getModifiers
+      val fieldNames = clazz.getDeclaredFields.map(_.getName).toSeq
+
+      val isScalaObject = !Modifier.isAbstract(mods) && fieldNames.contains(ModuleFieldName)
+      if (isScalaObject) {
+        if (isSuperclassOf(renderableClazz, clazz)) {
+          val objClazz = classloader.loadClass(className.dropRight(1)) // without $ at end
+          val content  = objClazz.getMethod("render").invoke(null).asInstanceOf[String]
+          val relPath  = objClazz.getMethod("relPath").invoke(null).asInstanceOf[Path]
           writeRenderableObject(hepekTargetDir, className, content, relPath, logger)
+        } else if (isSuperclassOf(multiRenderableClazz, clazz)) {
+          val objClazz = classloader.loadClass(className.dropRight(1)) // without $ at end
+          val renderables = objClazz
+            .getMethod("renderables")
+            .invoke(null)
+            .asInstanceOf[java.util.List[_]]
+          renderables.asScala.foreach { r =>
+            val content = renderableClazz.getMethod("render").invoke(r).asInstanceOf[String]
+            val relPath = renderableClazz.getMethod("relPath").invoke(r).asInstanceOf[Path]
+            writeRenderableObject(hepekTargetDir, className, content, relPath, logger)
+          }
         }
       }
     }
@@ -140,7 +139,7 @@ object Tasks {
   private def possibleClassNamesToRender(
       classDir: File,
       isIncremental: Boolean,
-      userClassNames: Seq[String]
+      userClassNames: Seq[String] // only the changed ones, if incremental
   ): Set[String] = {
     val classNames = if (isIncremental) {
       val filesJavaList = new java.util.ArrayList[File]()
@@ -153,7 +152,7 @@ object Tasks {
             userClassNames.contains(vertex.getAttributes.asInstanceOf[ClassAttributes].getName)
         )
         .mapValues { _.asScala.map(_.getAttributes.asInstanceOf[ClassAttributes].getName) }
-      userClassRevDeps.values.flatten 
+      userClassNames ++ userClassRevDeps.values.flatten
     } else userClassNames
     classNames.toSet
   }
@@ -177,5 +176,9 @@ object Tasks {
     val lastRunTimestamp = System.currentTimeMillis
     IO.write(lastRunFile, lastRunTimestamp.toString)
     lastRunTimestamp
+  }
+
+  private def isSuperclassOf(clazzParent: Class[_], clazz: Class[_]): Boolean = {
+    clazzParent.isAssignableFrom(clazz)
   }
 }

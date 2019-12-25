@@ -2,7 +2,7 @@ organization := "ba.sake"
 name := "sbt-hepek"
 description := "Hepek sbt plugin"
 
-version := "0.2.0"
+version := "0.2.1"
 
 libraryDependencies ++= Seq(
   "ba.sake" % "hepek-core" % "0.2.0"
@@ -22,10 +22,10 @@ publishTo := {
 
 licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))
 
-developers += Developer("sake92", "Sakib Hadžiavdić", "sakib@sake.ba", url("http://sake.ba"))
+developers += Developer("sake92", "Sakib Hadžiavdić", "sakib@sake.ba", url("https://sake.ba"))
 
 scmInfo := Some(
   ScmInfo(url("https://github.com/sake92/sbt-hepek"), "scm:git:git@github.com:sake92/sbt-hepek.git")
 )
 
-homepage := Some(url("http://sake.ba"))
+homepage := Some(url("https://github.com/sake92/sbt-hepek"))
