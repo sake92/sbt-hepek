@@ -1,4 +1,4 @@
-resolvers += Resolver.typesafeRepo("releases")
 
-addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.2.1")
-addSbtPlugin("com.jsuereth"  % "sbt-pgp"      % "1.1.0")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt"   % "2.5.2")
+
+addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.5.9")

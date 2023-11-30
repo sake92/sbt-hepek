@@ -13,11 +13,9 @@ import ba.sake.hepek.core._
 object HepekPlugin extends sbt.AutoPlugin {
   override def requires = plugins.JvmPlugin
 
-  val HepekCoreVersion = "0.2.0"
-
   object autoImport {
-    lazy val hepek       = taskKey[Long]("Runs hepek.")
-    lazy val hepekTarget = taskKey[File]("Output directory of hepek.")
+    lazy val hepek       = taskKey[Long]("Runs hepek")
+    lazy val hepekTarget = settingKey[File]("Output directory of hepek")
 
     lazy val hepekIncremental =
       settingKey[Boolean]("If true, hepek will try it's best to render minimum number of files.")
@@ -28,7 +26,7 @@ object HepekPlugin extends sbt.AutoPlugin {
     Seq(hepek := {
       val lastRun  = target.value / "hepek.lastrun"
       val classDir = classDirectory.value
-      val fcp      = (fullClasspath in Runtime).value.files // deps + user classes
+      val fcp      = (Runtime / fullClasspath).value.files // deps + user classes
       Tasks.runHepek(
         lastRun,
         hepekIncremental.value,
@@ -41,9 +39,9 @@ object HepekPlugin extends sbt.AutoPlugin {
 
   override def projectSettings: Seq[Setting[_]] =
     Seq(
-      hepekTarget := target.value / "web" / "public" / "main", // mimic sbt-web folder structure
-      hepekIncremental := true,
-      libraryDependencies += "ba.sake" % "hepek-core" % HepekCoreVersion // add "hepek-core" to user's deps
+      hepekTarget := baseDirectory.value / "hepek_files",
+      hepekIncremental := false,
+      libraryDependencies += "ba.sake" % "hepek-core" % "0.2.0" // add "hepek-core" to user's deps
     ) ++ inConfig(Compile)(rawHepekSettings)
 }
 
@@ -55,8 +53,8 @@ object HepekPlugin extends sbt.AutoPlugin {
  */
 object Tasks {
   private val ModuleFieldName    = "MODULE$"
-  private val RenderableFQN      = classOf[Renderable].getCanonicalName()
-  private val MultiRenderableFQN = classOf[MultiRenderable].getCanonicalName()
+  private val RenderableFQN      = "ba.sake.hepek.core.Renderable"
+  private val MultiRenderableFQN = "ba.sake.hepek.core.MultiRenderable"
 
   /**
     * @param lastRunFile File that contains timestamp of last run.
@@ -154,7 +152,7 @@ object Tasks {
         .mapValues { _.asScala.map(_.getAttributes.asInstanceOf[ClassAttributes].getName) }
       userClassNames ++ userClassRevDeps.values.flatten
     } else userClassNames
-    classNames.toSet
+    classNames.filter(_.startsWith("files.")).toSet
   }
 
   /** Writes Renderable object to its path */
@@ -165,10 +163,13 @@ object Tasks {
       relPath: Path,
       logger: Logger
   ): Unit = {
-    val p = hepekTargetDir.toPath.resolve(relPath)
-    logger.debug(s"Rendering '$className' to '${p.toString}'")
-    Files.createDirectories(p.getParent)
-    Files.write(p, content.getBytes(StandardCharsets.UTF_8))
+    if (relPath.startsWith("files")) {
+      val relPathAdapted = relPath.subpath(1, relPath.getNameCount()) // chop off "files" prefix
+      val p              = hepekTargetDir.toPath.resolve(relPathAdapted)
+      logger.debug(s"Rendering '$className' to '${p.toString}'")
+      Files.createDirectories(p.getParent)
+      Files.write(p, content.getBytes(StandardCharsets.UTF_8))
+    }
   }
 
   /** Writes last run to "target/hepek.lastrun" file */
