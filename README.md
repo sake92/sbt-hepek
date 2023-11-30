@@ -44,7 +44,7 @@ object RenderMe extends Renderable {
 }
 ```
 
-When you run `hepek` task, you'll find the `hepek_output/renderme.txt` file,  
+When you run `sbt hepek`, you'll find the `hepek_output/renderme.txt` file,  
 with text `Some text`.
 
 ## Examples / docs
