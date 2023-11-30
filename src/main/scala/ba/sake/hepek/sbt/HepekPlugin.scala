@@ -24,6 +24,10 @@ object HepekPlugin extends sbt.AutoPlugin {
 
   def rawHepekSettings: Seq[Setting[_]] =
     Seq(hepek := {
+      val publicFolder = resourceDirectory.value / "public"
+      IO.copyDirectory(publicFolder, hepekTarget.value)
+
+      // render hepek files
       val lastRun  = target.value / "hepek.lastrun"
       val classDir = classDirectory.value
       val fcp      = (Runtime / fullClasspath).value.files // deps + user classes
@@ -39,7 +43,7 @@ object HepekPlugin extends sbt.AutoPlugin {
 
   override def projectSettings: Seq[Setting[_]] =
     Seq(
-      hepekTarget := baseDirectory.value / "hepek_files",
+      hepekTarget := baseDirectory.value / "hepek_output",
       hepekIncremental := false,
       libraryDependencies += "ba.sake" % "hepek-core" % "0.2.0" // add "hepek-core" to user's deps
     ) ++ inConfig(Compile)(rawHepekSettings)
@@ -74,14 +78,13 @@ object Tasks {
       logger: Logger
   ): Long = {
     val allUserClassFiles = (classDir ** "*.class").get
-
     val userClassFiles = if (isIncremental && lastRunFile.exists) {
       val lastRun = IO.readLines(lastRunFile).head.toLong
       allUserClassFiles.filter(_.lastModified > lastRun) // only handle classes CHANGED since last hepek-ing
     } else allUserClassFiles                             // else ALL classes compiled
 
-    /* resolving */
-    val fcpClassloader = internal.inc.classpath.ClasspathUtilities.toLoader(fcp)
+    /* render */
+    val fcpClassloader = internal.inc.classpath.ClasspathUtil.toLoader(fcp)
     renderObjects(hepekTargetDir, userClassFiles, classDir, isIncremental, fcpClassloader, logger)
     writeLastRun(lastRunFile)
   }
