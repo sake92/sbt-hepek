@@ -23,23 +23,30 @@ object HepekPlugin extends sbt.AutoPlugin {
   import autoImport._
 
   def rawHepekSettings: Seq[Setting[_]] =
-    Seq(hepek := {
-      val publicFolder = resourceDirectory.value / "public"
-      IO.copyDirectory(publicFolder, hepekTarget.value)
+    Seq(
+      hepek := {
+        val publicFolder = resourceDirectory.value / "public"
+        IO.copyDirectory(publicFolder, hepekTarget.value)
 
-      // render hepek files
-      val lastRun  = target.value / "hepek.lastrun"
-      val classDir = classDirectory.value
-      val fcp      = (Runtime / fullClasspath).value.files // deps + user classes
-      Tasks.runHepek(
-        lastRun,
-        hepekIncremental.value,
-        fcp,
-        hepekTarget.value,
-        classDir,
-        streams.value.log
-      )
-    })
+        // render hepek files
+        val lastRun  = target.value / "hepek.lastrun"
+        val classDir = classDirectory.value
+        val fcp      = (Runtime / fullClasspath).value.files // deps + user classes
+        Tasks.runHepek(
+          lastRun,
+          hepekIncremental.value,
+          fcp,
+          hepekTarget.value,
+          classDir,
+          streams.value.log
+        )
+      },
+      sourceGenerators += Def.task {
+        val file         = (Compile / sourceManaged).value / "public_resources.scala"
+        val publicFolder = resourceDirectory.value / "public"
+        Tasks.makePublicResources(file, publicFolder)
+      }.taskValue
+    )
 
   override def projectSettings: Seq[Setting[_]] =
     Seq(
@@ -184,5 +191,34 @@ object Tasks {
 
   private def isSuperclassOf(clazzParent: Class[_], clazz: Class[_]): Boolean = {
     clazzParent.isAssignableFrom(clazz)
+  }
+
+  // generate handy resources
+  def makePublicResources(file: File, publicFolder: File): Seq[File] = {
+    if (!publicFolder.exists()) return Seq.empty
+
+    var res    = ""
+    var indent = 0
+    def writeResource(path: Path, parentPath: String): Unit = {
+      val fileName = path.getFileName.toString
+      val pathName = if (parentPath.isEmpty) fileName else s"${parentPath}/${fileName}"
+      if (Files.isDirectory(path)) {
+        res += (" " * indent) + s"object ${fileName} {\n"
+        indent += 2
+        Files.list(path).forEach(p => writeResource(p, pathName))
+        indent -= 2
+        res += (" " * indent) + "}\n"
+      } else {
+        res += (" " * indent) + s"""val `${fileName}` = Resource("${pathName}")\n"""
+      }
+    }
+    Files.list(publicFolder.toPath).forEach(p => writeResource(p, ""))
+
+    IO.write(file, s"""package files
+                      |import ba.sake.hepek.Resource
+                      |
+                      |${res}
+                      |""".stripMargin)
+    Seq(file)
   }
 }
