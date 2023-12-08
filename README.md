@@ -9,7 +9,7 @@ See also [**hepek**](https://github.com/sake92/hepek), static content generator 
 
 Add the plugin to `project/plugins.sbt`:
 ```scala
-addSbtPlugin("ba.sake" % "sbt-hepek" % "0.4.0")
+addSbtPlugin("ba.sake" % "sbt-hepek" % "0.5.0")
 ```
 
 and enable it in `build.sbt`: 

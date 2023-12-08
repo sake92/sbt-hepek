@@ -207,7 +207,7 @@ object Tasks {
         indent += 2
         Files.list(path).forEach(p => writeResource(p, pathName))
         indent -= 2
-        res += (" " * indent) + "}\n"
+        res += (" " * indent) + "}\n\n"
       } else {
         res += (" " * indent) + s"""val `${fileName}` = Resource("${pathName}")\n"""
       }
