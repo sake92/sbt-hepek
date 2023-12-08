@@ -1,5 +1,5 @@
 # sbt-hepek
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ba.sake/sbt-hepek/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ba.sake/sbt-hepek)  
+![Maven Central](https://img.shields.io/maven-central/v/ba.sake/sbt-hepek_2.12_1.0)
 
 An sbt plugin for writing Scala `object`s to files.  
 See also [**hepek**](https://github.com/sake92/hepek), static content generator that builds upon this plugin.
